@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:context="http://www.springframework.org/schema/context" xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.1.xsd"
+       default-lazy-init="true">
+
+    <description>Spring Configuration</description>
+
+    <!-- 加载配置属性文件 -->
+    <context:property-placeholder ignore-unresolvable="true" location="classpath:datacraler.properties"/>
+
+    <!-- 加载应用属性实例，可通过  @Value("#{APP_PROP['jdbc.driver']}") String jdbcDriver 方式引用 -->
+    <util:properties id="APP_PROP" location="classpath:datacraler.properties" local-override="true"/>
+
+    <!-- 使用Annotation自动注册Bean -->
+    <context:component-scan base-package="com.cs.wujiuqi.data.crawler"/><!-- base-package 如果多个，用“,”分隔 -->
+
+    <!-- 缓存配置 -->
+
+
+    <!-- 数据源配置, 使用 BoneCP 数据库连接池 -->
+    <!--<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">-->
+        <!--&lt;!&ndash; 数据源驱动类可不写，Druid默认会自动根据URL识别DriverClass &ndash;&gt;-->
+        <!--<property name="driverClassName" value="${jdbc.driver}"/>-->
+        <!--&lt;!&ndash; 基本属性 url、user、password &ndash;&gt;-->
+        <!--<property name="url" value="${jdbc.url}"/>-->
+        <!--<property name="username" value="${jdbc.username}"/>-->
+        <!--<property name="password" value="${jdbc.password}" />-->
+
+        <!--&lt;!&ndash; 配置初始化大小、最小、最大 &ndash;&gt;-->
+        <!--<property name="initialSize" value="${jdbc.pool.init}"/>-->
+        <!--<property name="minIdle" value="${jdbc.pool.minIdle}"/>-->
+        <!--<property name="maxActive" value="${jdbc.pool.maxActive}"/>-->
+
+        <!--&lt;!&ndash; 配置获取连接等待超时的时间 &ndash;&gt;-->
+        <!--<property name="maxWait" value="60000"/>-->
+
+        <!--&lt;!&ndash; 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 &ndash;&gt;-->
+        <!--<property name="timeBetweenEvictionRunsMillis" value="60000"/>-->
+
+        <!--&lt;!&ndash; 配置一个连接在池中最小生存的时间，单位是毫秒 &ndash;&gt;-->
+        <!--<property name="minEvictableIdleTimeMillis" value="300000"/>-->
+
+        <!--<property name="validationQuery" value="${jdbc.testSql}"/>-->
+        <!--<property name="testWhileIdle" value="true"/>-->
+        <!--<property name="testOnBorrow" value="false"/>-->
+        <!--<property name="testOnReturn" value="false"/>-->
+
+        <!--&lt;!&ndash; 打开PSCache，并且指定每个连接上PSCache的大小（Oracle使用）-->
+        <!--<property name="poolPreparedStatements" value="true" />-->
+        <!--<property name="maxPoolPreparedStatementPerConnectionSize" value="20" /> &ndash;&gt;-->
+
+        <!--&lt;!&ndash; 配置监控统计拦截的filters &ndash;&gt;-->
+        <!--&lt;!&ndash;<property name="filters" value="stat" /> &ndash;&gt;-->
+    <!--</bean>-->
+
+    <!-- 数据源配置, 使用应用服务器的数据库连接池
+    <jee:jndi-lookup id="dataSource" jndi-name="java:comp/env/jdbc/jeesite" />-->
+
+    <!-- 数据源配置, 不使用连接池
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}" />
+        <property name="url" value="${jdbc.url}" />
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>-->
+
+    <!--HttpClient begin-->
+    <!-- 定义连接管理器 -->
+    <bean id="connectionManager"
+          class="org.apache.http.impl.conn.PoolingHttpClientConnectionManager">
+        <!-- 最大连接数 -->
+        <property name="maxTotal" value="${http.maxTotal}"/>
+        <property name="defaultMaxPerRoute" value="${http.defaultMaxPerRoute}"/>
+    </bean>
+    <!-- 定义Httpclient构造器 -->
+    <bean id="httpClientBuilder" class="org.apache.http.impl.client.HttpClientBuilder">
+        <property name="connectionManager" ref="connectionManager"/>
+    </bean>
+    <!--定义httpClient对象，该bean一定是多例的吗？ scope="prototype" -->
+    <bean id="httpClient" class="org.apache.http.impl.client.CloseableHttpClient" factory-bean="httpClientBuilder"
+          factory-method="build"/>
+    <!--定义requestConfig构建器 -->
+    <bean id="requestConfigBuilder" class="org.apache.http.client.config.RequestConfig.Builder">
+        <!--设置创建连接的最长时间 -->
+        <property name="connectTimeout" value="${http.connectTimeout}"/>
+        <!--从连接池中获取到连接的最长时间 -->
+        <property name="connectionRequestTimeout" value="${http.connectionRequestTimeout}"/>
+        <!--数据传输的最长时间 -->
+        <property name="socketTimeout" value="${http.socketTimeout}"/>
+    </bean>
+    <!--请求参数对象 -->
+    <bean class="org.apache.http.client.config.RequestConfig"
+          factory-bean="requestConfigBuilder" factory-method="build"></bean>
+    <!--定期清理无效连接 ,com.baidu.utils这个链接可以填写你自己不需要的无效链接-->
+    <!--<bean class="com.baidu.utils.httpclient.IdleConnectionEvictor"
+    destroy-method="shutdown">
+    <constructor-arg index="0" ref="connectionManager" />
+    </bean>-->
+    <!--HttpClient end-->
+
+    <!--根据Executors的静态方法构造-->
+    <bean id="executeService"  class="java.util.concurrent.ThreadPoolExecutor">
+        <constructor-arg index="0" value="0"/><!--name="corePoolSize" -->
+        <constructor-arg index="1">
+            <util:constant static-field="java.lang.Integer.MAX_VALUE"/>
+        </constructor-arg><!--name="maximumPoolSize" java.lang.Integer.MAX_VALUE-->
+        <constructor-arg index="2" value="60" /><!--name="keepAliveTime" -->
+        <constructor-arg index="3" >
+            <util:constant static-field="java.util.concurrent.TimeUnit.SECONDS"/>
+        </constructor-arg>
+        <constructor-arg index="4">
+            <bean class="java.util.concurrent.SynchronousQueue"></bean>
+        </constructor-arg>
+        <!--name="unit" -->
+    </bean>
+    <!--public ThreadPoolExecutor(int corePoolSize,
+    int maximumPoolSize,
+    long keepAliveTime,
+    TimeUnit unit,
+    BlockingQueue<Runnable> workQueue)-->
+</beans>
