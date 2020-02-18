@@ -24,13 +24,14 @@ public interface Plant{
      */
     void setFlowControllers(Map<String,FlowController> flowControllers);
 
+
     /**
-     * 启动车间
+     * 停止车间
      */
     void stop();
 
     /**
-     * 停止车间
+     * 启动车间
      */
     void start();
 }

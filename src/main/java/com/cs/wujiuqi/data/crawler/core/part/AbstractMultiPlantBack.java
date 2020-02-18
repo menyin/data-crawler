@@ -4,6 +4,7 @@ import com.cs.wujiuqi.data.crawler.core.api.FlowController;
 import com.cs.wujiuqi.data.crawler.core.api.Plant;
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.exception.IteratorStopException;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.*;
 import java.util.Map;
@@ -24,7 +25,9 @@ import java.util.function.Consumer;
  *
  */
 public abstract class AbstractMultiPlantBack implements Plant {
-    final static private ExecutorService executorService = Executors.newCachedThreadPool();
+//    final static private ExecutorService executorService = Executors.newCachedThreadPool();
+    @Autowired
+    private ExecutorService executorService;
 //    final static private ExecutorService executorService = Executors.newScheduledThreadPool(100);
 //    private volatile boolean isRunning = true;
     private Map<String, StoppableIterator> upIterators;
@@ -141,7 +144,10 @@ public abstract class AbstractMultiPlantBack implements Plant {
     }
 
 
-    public static ExecutorService getExecutorService() {
+    /*public static ExecutorService getExecutorService() {
+        return executorService;
+    }*/
+    public ExecutorService getExecutorService() {
         return executorService;
     }
 

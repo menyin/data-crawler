@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import static com.cs.wujiuqi.data.crawler.core.common.StaticObject.AP;
 
 /**
  */
@@ -17,8 +18,7 @@ public class EventBus {
     private static com.google.common.eventbus.EventBus eventBus;
     private static Executor executor;
     static {
-        ApplicationContext applicationContext = new ClassPathXmlApplicationContext("spring-context.xml");
-        executor = (Executor)applicationContext.getBean("executeService");
+        executor = (Executor)AP.getBean("executeService");
         eventBus = new AsyncEventBus(executor, (exception, context)-> {
             /*LOGGER.error("event bus subscriber ex", exception)*/
         });

@@ -1,49 +1,32 @@
 package com.cs.wujiuqi.data.crawler;
 
-import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
-import com.cs.wujiuqi.data.crawler.core.exception.IteratorStopException;
-import com.cs.wujiuqi.data.crawler.zhilian.PageFilterZhilianJobListUpIterator;
-import com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobListPlant;
-import com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobPlant;
-import org.apache.http.ParseException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
+import com.cs.wujiuqi.data.crawler.core.api.Pipline;
 
-import java.text.SimpleDateFormat;
-import java.util.*;
-
-import static com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobListPlantBack.CHAIN_KEY_JOB_LIST;
+import java.util.Map;
+import static com.cs.wujiuqi.data.crawler.core.common.StaticObject.AP;
 
 public class Bootstrap {
-    private final static ApplicationContext applicationContext;
-
-    static {
-        applicationContext = new ClassPathXmlApplicationContext("spring-context.xml");
-    }
 
 
-    public static void main(String[] args) throws InterruptedException, java.text.ParseException {
 
-        /*ZhilianJobListPlant zhilianJobListPlant = (ZhilianJobListPlant) applicationContext.getBean("zhilianJobListPlant");
-        ZhilianJobPlant zhilianJobPlant = (ZhilianJobPlant) applicationContext.getBean("zhilianJobPlant");
+    public static void main(String[] args) throws InterruptedException{
+
+        Map<String,Pipline> piplines=AP.getBeansOfType(Pipline.class);
+        for (Map.Entry<String,Pipline> piplineEntry:piplines.entrySet()){
+            piplineEntry.getValue().start();
+            System.out.println(piplineEntry.getKey()+"- 启动");
+        }
+        Thread.sleep(Integer.MAX_VALUE);
+
+
+
+
+        /*ZhilianJobListPlant zhilianJobListPlant = (ZhilianJobListPlant) AP.getBean("zhilianJobListPlant");
+        ZhilianJobPlant zhilianJobPlant = (ZhilianJobPlant) AP.getBean("zhilianJobPlant");
         zhilianJobPlant.setUpIterators(zhilianJobListPlant.getDownIterators());
         zhilianJobListPlant.start();
         zhilianJobPlant.start();
         Thread.sleep(Integer.MAX_VALUE);*/
-
-
-        ZhilianJobListPlant zhilianJobListPlant = (ZhilianJobListPlant) applicationContext.getBean("zhilianJobListPlant");
-        ZhilianJobPlant zhilianJobPlant = (ZhilianJobPlant) applicationContext.getBean("zhilianJobPlant");
-        StoppableIterator topIterator = (PageFilterZhilianJobListUpIterator) applicationContext.getBean("pageFilterZhilianJobListUpIterator");
-
-        Map<String,StoppableIterator> upIterators=new HashMap<>();
-        upIterators.put(CHAIN_KEY_JOB_LIST, topIterator);
-        zhilianJobListPlant.setUpIterators(upIterators);
-
-        zhilianJobPlant.setUpIterators(zhilianJobListPlant.getDownIterators());
-        zhilianJobListPlant.start();
-        zhilianJobPlant.start();
-        Thread.sleep(Integer.MAX_VALUE);
 
         /*try {
             StoppableIterator si = (PageFilterZhilianJobListUpIterator) applicationContext.getBean("pageFilterZhilianJobListUpIterator");

@@ -102,7 +102,7 @@
     </bean>-->
     <!--HttpClient end-->
 
-    <!--根据Executors的静态方法构造-->
+    <!--根据Executors#newCachedThreadPool的静态方法构造-->
     <bean id="executeService"  class="java.util.concurrent.ThreadPoolExecutor">
         <constructor-arg index="0" value="0"/><!--name="corePoolSize" -->
         <constructor-arg index="1">
