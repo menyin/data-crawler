@@ -3,6 +3,7 @@ package com.cs.wujiuqi.data.crawler.zhilian;
 import com.cs.wujiuqi.data.crawler.core.api.FlowController;
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.common.JsonUtil;
+import com.cs.wujiuqi.data.crawler.core.common.Logs;
 import com.cs.wujiuqi.data.crawler.core.common.RetryEvent;
 import com.cs.wujiuqi.data.crawler.core.part.AbstractMultiPlant;
 import com.cs.wujiuqi.data.crawler.core.part.GlobalFlowController;
@@ -21,6 +22,7 @@ import java.sql.SQLException;
 
 import com.cs.wujiuqi.data.crawler.core.common.JdbcUtils;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -106,13 +108,19 @@ public class ZhilianJobPlant extends AbstractMultiPlant implements Consumer {
                 //System.out.println("jobNumber：" + jobNumber + "，任务【" + taskId + "】-线程名" + Thread.currentThread().getName() + ",响应码：" + response.getStatusLine() + ",执行时间：" + (System.currentTimeMillis() - startT) + "毫秒");
                 //System.out.println(""+companyNumbers+jobNumbers);
                 addJob2DB(jobId, number, companyId, name, workCity,json, publishTime);
+
+                Logs.HTTP.info("the request response was processed successfully,requestUrl={}",URI + jobNumber);
             } else {
-                System.out.println("jobNumber：" + jobNumber + ",response is null!!!");
+                Logs.HTTP.warn("a response is received,but it is null,jobNumber={}",jobNumber);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            triggerRetry(new RetryEvent(CHAIN_KEY_JOB));//用事件总线通知线程10分钟后重试 ps:重试时间可以自定
-            System.out.println("记录日志到日志系统 taskId:" + taskId + ",jobNumber:" + jobNumber + ",异常信息：" + e.getMessage());
+//            e.printStackTrace();
+            if(e instanceof SSLHandshakeException){
+                Logs.HTTP.error("send a request,but remote server rejuect,and trigger retry affter 10 minutes.requesUrl={},exception:{}",URI + jobNumber,e);
+                triggerRetry(new RetryEvent(CHAIN_KEY_JOB));//用事件总线通知线程10分钟后重试 ps:重试时间可以自定
+            }else{
+                Logs.HTTP.error("a response is received,but it is error,taskId={},jobNumber={},exception:{}",taskId,jobNumber,e);
+            }
             //throw new Exception("超过时长，抛出异常给父类，通知流控器线程，线程暂停10分钟后再试（再循环）");
 
         }

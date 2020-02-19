@@ -2,6 +2,7 @@ package com.cs.wujiuqi.data.crawler.zhilian;
 
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.common.IteratorStopEvent;
+import com.cs.wujiuqi.data.crawler.core.common.Logs;
 import com.cs.wujiuqi.data.crawler.core.exception.IteratorStopException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -60,7 +61,7 @@ public class ZhilianJobListUpIterator implements StoppableIterator<String> {
             }
             else {
                 conditionCarteinsIterator=CONDITION_CARTEINS.iterator();
-                System.out.println("一轮结束---------------------");
+                Logs.CONSOLE.info("-------------ZhilianJobListUpIterator 一轮迭代结束--------------");
                 return   next();
             }
 

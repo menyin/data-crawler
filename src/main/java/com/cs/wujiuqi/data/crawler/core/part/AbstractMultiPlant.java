@@ -5,6 +5,7 @@ import com.cs.wujiuqi.data.crawler.core.api.Plant;
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.common.EventBus;
 import com.cs.wujiuqi.data.crawler.core.common.EventConsumer;
+import com.cs.wujiuqi.data.crawler.core.common.Logs;
 import com.cs.wujiuqi.data.crawler.core.common.RetryEvent;
 import com.cs.wujiuqi.data.crawler.core.exception.IteratorStopException;
 import com.google.common.eventbus.AllowConcurrentEvents;
@@ -63,6 +64,7 @@ public abstract class AbstractMultiPlant extends EventConsumer implements Plant 
             downIterators.stop();//调用迭代器stop()就可以让所在主线程退出循环
         }
 //        isRunning = false;//当前任务结束标志位重置
+        Logs.CONSOLE.info("plant-{} stop,it's downIterators stop both",this.getClass().getName());
     }
 
     @Override
@@ -92,11 +94,12 @@ public abstract class AbstractMultiPlant extends EventConsumer implements Plant 
                         lock.lock();
                         if (isRetry.get()) {//有一个任务线程请求10分钟重试,
                             try {
-                                System.out.println("//有一个任务线程请求10后重试,.....");
+//                                System.out.println("//有一个任务线程请求10后重试,.....");
 //                                condition.await(retryWaitMinute.longValue(),TimeUnit.MINUTES);
                                 condition.await(retryWaitMinute.longValue(), TimeUnit.SECONDS);
                                 isRetry.compareAndSet(true, false);
                                 lock.unlock();
+                                Logs.CONSOLE.debug("have a thread catch retry message after {}minutes",retryWaitMinute);
                                 continue;
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
@@ -110,7 +113,7 @@ public abstract class AbstractMultiPlant extends EventConsumer implements Plant 
                             }
 //                            if (item.toString().equals("9999")) break;
                         } catch (IteratorStopException e) {//
-                            System.out.println("当前迭代器要停止了，我记录下日志,总用时：" + (System.currentTimeMillis() - startT));
+                            Logs.CONSOLE.debug("current iterator be closed,use times={}",System.currentTimeMillis() - startT);
                             break;//递归退出依靠迭代器抛出IteratorStopException异常
 //                            return;
                         }
@@ -118,6 +121,7 @@ public abstract class AbstractMultiPlant extends EventConsumer implements Plant 
                             if (flowController.checkQps()) {
                                 executorService.submit(new InnerTask(item, consumer));//消费掉进行消费
 //                new Thread(new InnerTask(item, consumer)).start();//消费掉进行消费
+                                Logs.CONSOLE.debug("add new task to executorService,item={},consumer={}",item,consumer);
                                 item = null;
                             } else {
 
@@ -125,20 +129,21 @@ public abstract class AbstractMultiPlant extends EventConsumer implements Plant 
 
 //                                    executorService.awaitTermination(flowController.getDelay(), TimeUnit.MICROSECONDS);
                                     lock.lock();
+                                    Logs.CONSOLE.debug("have a new task add to executorService delay,item={},consumer={}",item,consumer);
                                     condition.awaitNanos(flowController.getDelay());//时间是纳秒,JDK自带阻塞无法实现纳秒级别阻塞
                                     lock.unlock();
                                 } catch (InterruptedException e) {
 //                                    isRunning = false;//标志位设置为false，线程不再运行
-                                    System.out.println("handler主线程出现异常：" + e);
+                                    Logs.CONSOLE.error("{} durning a new task add to executorService,throw a exception,e={}",AbstractMultiPlant.class,e);
                                 }
                             }
                             continue;
                         } catch (Exception e) {
-                            System.out.println("记录当前日志+item" + e.getMessage());
+                            Logs.CONSOLE.error("{} durning a new task add to executorService,throw a exception,e={}",AbstractMultiPlant.class,e);
                         }
                     }
                     long endT = System.currentTimeMillis();
-                    System.out.println("总耗时：" + (endT - startT));
+                    Logs.CONSOLE.error("total tasks add to executorService,total use time={}ms",endT - startT);
 
                 }
             });

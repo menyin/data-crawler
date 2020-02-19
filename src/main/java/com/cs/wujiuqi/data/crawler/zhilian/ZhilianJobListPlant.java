@@ -3,6 +3,7 @@ package com.cs.wujiuqi.data.crawler.zhilian;
 import com.cs.wujiuqi.data.crawler.core.api.FlowController;
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.common.JsonUtil;
+import com.cs.wujiuqi.data.crawler.core.common.Logs;
 import com.cs.wujiuqi.data.crawler.core.common.RetryEvent;
 import com.cs.wujiuqi.data.crawler.core.part.*;
 import org.apache.http.HttpEntity;
@@ -13,6 +14,7 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import javax.net.ssl.SSLHandshakeException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -99,21 +101,8 @@ public class ZhilianJobListPlant extends AbstractMultiPlant implements Consumer 
      * @param requestUrl 上游迭代器传下来的带条件url
      */
     public void accept(Object requestUrl){
-//        System.out.println(Thread.currentThread().getName()+"--pageIndex="+pageIndex);
-        System.out.println(System.currentTimeMillis()+"--requestUrl="+requestUrl);
-        /*
-        if (pageIndex.toString().equals("10")){//当到10页时，出现错误要求重试
-            EventBus.post(new RetryEvent(CHAIN_KEY_JOB_LIST,Long.valueOf(3)));
-            System.out.println("当到10页时，出现错误要求重试");
-        }*/
-       /* try {
-            System.out.println("任务线程执行任务需要1s....");
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
-
-        long startT = System.currentTimeMillis();
+        Logs.HTTP.debug("start send request,requestUrl={}",requestUrl);
+//        long startT = System.currentTimeMillis();
         HttpGet httpGet = new HttpGet(requestUrl.toString());
         HttpResponse response = null;
         // 由客户端执行(发送)Get请求
@@ -132,7 +121,7 @@ public class ZhilianJobListPlant extends AbstractMultiPlant implements Consumer 
                     try {
                         downBlockingQueue4Com.put(companyNumber);
                     } catch (InterruptedException e) {
-                        System.out.println(this.getClass()+"公司项添加失败 companyNumber="+companyNumber);
+                        Logs.HTTP.warn("faill to add a company item to the company queue,requestUrl={},companyNumber={},e={}",requestUrl,companyNumber,e.getMessage());
                     }
                 });
                 Set<String> jobNumbers = JsonUtil.findNoRepeatJosnValues(json,"number");
@@ -140,20 +129,23 @@ public class ZhilianJobListPlant extends AbstractMultiPlant implements Consumer 
                     try {
                         downBlockingQueue4Job.put(number);
                     } catch (InterruptedException e) {
-                        System.out.println(this.getClass()+"职位项添加失败 companyNumber="+number);
+                        Logs.HTTP.warn("faill to add a job item to the company queue,requestUrl={},jobNumber={},e={}",requestUrl,number,e.getMessage());
                     }
                 });
-//                System.out.println("页码："+pageIndex+"，任务【" + taskId + "】-线程名" + Thread.currentThread().getName() + ",响应码：" + response.getStatusLine() + ",执行时间：" + (System.currentTimeMillis() - startT) + "毫秒");
-//                System.out.println(""+companyNumbers+jobNumbers);
+                Logs.HTTP.info("the request response was processed successfully,requestUrl={}",requestUrl);
             }else{
-                System.out.println("请求列表页url："+requestUrl+",response is null!!!");
+                Logs.HTTP.warn("a response is received,but it is null,requesUrl={}",requestUrl);
             }
         } catch (Exception e) {
-//            e.printStackTrace();
-            triggerRetry(new RetryEvent(CHAIN_KEY_JOB_LIST));//用事件总线通知线程10分钟后重试 ps:重试时间可以自定
-            System.out.println("记录日志到日志系统 taskId:"+taskId+",requestUrl:"+requestUrl+",异常信息："+e.getMessage());
-            //throw new Exception("超过时长，抛出异常给父类，通知流控器线程，线程暂停10分钟后再试（再循环）");
+            if(e instanceof SSLHandshakeException){
+                Logs.HTTP.error("send a request,but remote server rejuect,and trigger retry affter 10 minutes.requesUrl={},exception:{}",requestUrl,e);
+                triggerRetry(new RetryEvent(CHAIN_KEY_JOB_LIST));//用事件总线通知线程10分钟后重试 ps:重试时间可以自定
+            }else{
+                Logs.HTTP.error("a response is received,but it is error,requesUrl={},exception:{}",requestUrl,e);
+            }
         }
+        Logs.HTTP.debug("end to send request,requestUrl={}",requestUrl);
+
     }
 
 

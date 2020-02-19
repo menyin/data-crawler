@@ -10,7 +10,17 @@
     <description>Spring Configuration</description>
 
     <!-- 加载配置属性文件 -->
-    <context:property-placeholder ignore-unresolvable="true" location="classpath:datacraler.properties"/>
+    <!--<bean id="propertyConfig" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+    <!--<bean id="propertyConfig" class="com.cs.wujiuqi.data.crawler.core.common.SysPropertyPlaceholderConfigurer">-->
+    <bean id="propertyPlaceholder" class="com.cs.wujiuqi.data.crawler.core.common.SysPropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:datacraler.properties</value>
+            </list>
+        </property>
+        <property name="fileEncoding" value="UTF-8"/>
+    </bean>
+    <!--<context:property-placeholder ignore-unresolvable="true" location="classpath:datacraler.properties"/>-->
 
     <!-- 加载应用属性实例，可通过  @Value("#{APP_PROP['jdbc.driver']}") String jdbcDriver 方式引用 -->
     <util:properties id="APP_PROP" location="classpath:datacraler.properties" local-override="true"/>

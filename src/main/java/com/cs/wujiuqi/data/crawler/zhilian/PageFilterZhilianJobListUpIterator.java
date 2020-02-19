@@ -2,6 +2,7 @@ package com.cs.wujiuqi.data.crawler.zhilian;
 
 import com.cs.wujiuqi.data.crawler.core.api.StoppableIterator;
 import com.cs.wujiuqi.data.crawler.core.common.JsonUtil;
+import com.cs.wujiuqi.data.crawler.core.common.Logs;
 import com.cs.wujiuqi.data.crawler.core.common.RetryEvent;
 import com.cs.wujiuqi.data.crawler.core.exception.IteratorStopException;
 import org.apache.http.HttpEntity;
@@ -23,7 +24,6 @@ import java.util.Set;
  */
 @Component
 public class PageFilterZhilianJobListUpIterator extends ZhilianJobListUpIterator {
-    private static String CHECK_PAGE_INDEX_LIMIT = "https://capi.zhaopin.com/capi/position/search?component=true&pageIndex=1";
     private int currPageIndex = 0;
     private int pageIndexLimit = 50;//用浮点减少转化
     private int pageSizeLimit = 20;
@@ -42,17 +42,7 @@ public class PageFilterZhilianJobListUpIterator extends ZhilianJobListUpIterator
     public String next() throws IteratorStopException {
         synchronized (this.getClass()) {
             ++currPageIndex;
-            if (currPageIndex == 1) {
-                System.out.println("页码为1时，开始检测页码限制.......");
-                //http请求检测当前条件下总记录数 getPageIndexLimit();
-//                double numTotal=Double.valueOf("numTotal,假如是125");//TODO 带着currResult去请求
-                String numTotalStr = getPageIndexLimit();
-                double numTotal;
-                numTotal = numTotalStr == null ? 1000 : Double.valueOf(numTotalStr);
-                if (numTotal != pageIndexLimit * pageSizeLimit) {
-                    pageIndexLimit = (int) Math.ceil(numTotal / (double) pageSizeLimit);
-                }
-            }
+
             //页码检测
             if (currPageIndex > pageIndexLimit) {
                 currPageIndex = 0;
@@ -64,14 +54,25 @@ public class PageFilterZhilianJobListUpIterator extends ZhilianJobListUpIterator
                 currDefectiveResult = super.next();//暂存
 //                System.out.println("Carteion use time:" + (System.currentTimeMillis() - startT) + "ms");
             }
-            return currDefectiveResult + "&pageIndex=" + currPageIndex;
+            String resultUrl=currDefectiveResult + "&pageIndex=" + currPageIndex;
+            if (currPageIndex == 1) {
+//                System.out.println("页码为1时，开始检测页码限制.......");
+                Logs.CONSOLE.debug("pageIndex=1，start pageIndex limit check.......");
+                //http请求检测当前条件下总记录数 getPageIndexLimit();
+                String numTotalStr = getPageIndexLimit(resultUrl);
+                double numTotal;
+                numTotal = numTotalStr == null ? 1000 : Double.valueOf(numTotalStr);
+                if (numTotal != pageIndexLimit * pageSizeLimit) {
+                    pageIndexLimit = (int) Math.ceil(numTotal / (double) pageSizeLimit);
+                }
+            }
+            return resultUrl;
         }
     }
 
-    private String getPageIndexLimit() {
-
+    private String getPageIndexLimit(String checkUrl) {
         long startT = System.currentTimeMillis();
-        HttpGet httpGet = new HttpGet(CHECK_PAGE_INDEX_LIMIT);
+        HttpGet httpGet = new HttpGet(checkUrl);
         HttpResponse response = null;
         // 由客户端执行(发送)Get请求
         String taskId = null;
@@ -91,7 +92,8 @@ public class PageFilterZhilianJobListUpIterator extends ZhilianJobListUpIterator
             }
         } catch (Exception e) {
 //            e.printStackTrace();
-            System.out.println("记录日志到日志系统 taskId:" + taskId + ",异常信息：" + e.getMessage());
+            Logs.HTTP.error("faill to check a pageIndex limit,checkUrl={}",checkUrl);
+//            System.out.println("记录日志到日志系统 taskId:" + taskId + ",异常信息：" + e.getMessage());
             //throw new Exception("超过时长，抛出异常给父类，通知流控器线程，线程暂停10分钟后再试（再循环）");
 
         }
