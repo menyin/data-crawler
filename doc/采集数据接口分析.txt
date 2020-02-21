@@ -1,0 +1,132 @@
+*****************接口 begin*********************
+智联
+所有职位： 
+  https://capi.zhaopin.com/capi/position/search?component=true
+单个职位：
+  https://capi.zhaopin.com/capi/position/detail?number=CC712564680J00291329305
+
+公司信息：
+  https://capi.zhaopin.com/capi/company/detail?number=CZ369777930
+职位搜索（后期该接口被智联屏蔽）
+  https://capi.zhaopin.com/capi/position/search?S_SOU_FULL_INDEX=php&S_SOU_WORK_CITY=682
+
+  https://capi.zhaopin.com/capi/position/searchV2?channel=bdxiaochengxu&d=F28C2A1A-1E21-4FFE-860A-793C32CAA3DD&v=1.0&platform=15&pageIndex=1&pageSize=40&isCompus=0&S_SOU_SALARY=06001%2C08000&S_SOU_WORK_CITY=682&S_SOU_POSITION_NAME_QUERY=php&eventScenario=bdmpZhaopinSearchV2&e=7e44e9cc18a8b19c4a5808a5470c376b
+行业
+https://img09.zhaopin.com/2012/other/mobile/mapp/resource/industry.json
+https://img09.zhaopin.com/2012/other/mobile/mapp/resource/v15/industry.json
+https://fecdn3.zhaopin.cn/m/index.web.b1738e.js
+
+异常信息：
+正则解析错误： Exception in thread "main" java.util.regex.PatternSyntaxException: Illegal repetition near index 0
+远程服务器在握手期间关闭连接 javax.net.ssl.SSLHandshakeException: Remote host closed connection during handshake
+数据库错误 java.sql.SQLException: Incorrect string value: '\xF0\x9F\x88\xB6\xE5\x9B...' for column 
+	   java.sql.SQLException: Data truncation: Data too long for column
+智联指定条件请求列表响应 {"statusDescription":"服务器异常，请稍后再试","taskId":"30c9cc1835964c56a27f05e68291469a","statusCode":210}
+智联后面访问结果空响应，应该是智联发现漏洞屏蔽了：{"statusCode":200,"statusDescription":"成功","taskId":"b205d0589fb441ef90b53abbfa900608"}
+
+注意：智联的职位的json数据字符串可以达到72720个字符，text类型只能存6w+字符，因此换blob类型
+
+58
+职位类别
+  https://app.58.com/api/bigcatetory/category?v=1&cityid=606&curVer=9.5.2&appId=1&format=json&os=android
+职位搜索
+  post接口（实测不可用）  
+  https://wxapp.58.com/list/info
+  param={"cityId":"606","cateCode":"4","cateId":"580","dispCateId":"13901","dispLocalId":606,"pageNum":10,"key":"业务员","queryList":{}}
+
+  get接口，这个是58首页职位的
+  https://app.58.com/api/list/siji?tabkey=allcity&action=getListInfo,getFilterInfo&curVer=9.5.2&ct=filter&appId=1&format=json&os=android&localname=xm&v=1&geotype=baidu&isNeedAd=&location=606,610,18383&key=司机&page=1&filterParams={"cmcspid":"9495","filtercate":"sonhuosiji","filterLocal":"xm"}&params={"nsource":"sou","classpolicy":"job_A,suggest_tag_A,tradeline_job"}
+
+职位详情
+  https://wxapp.58.com/list/detail?infoId=40706289135389
+
+*****************接口 end*********************
+
+
+
+
+*************智联搜索条件数据分析 begin**************
+
+https://capi.zhaopin.com/capi/position/searchV2
+?channel=bdxiaochengxu 应该应用的类型
+&d=F28C2A1A-1E21-4FFE-860A-793C32CAA3DD&v=1.0
+&platform=15  平台 
+&pageIndex=1  限制50*20=1000条数据  50个
+&pageSize=40  
+&isCompus=0   是否PC端
+&S_SOU_SALARY=06001%2C08000  月薪  15个
+&S_SOU_WORK_CITY=682 工作城市 180+个
+&S_SOU_POSITION_NAME_QUERY=php n个 
+&eventScenario=bdmpZhaopinSearchV2 
+&e=7e44e9cc18a8b19c4a5808a5470c376b
+
+学历：12个
+工作经验：7个
+C:\Users\cf\Desktop\dump\cralwer\testToIterator\test.hprof
+com.google.common.collect.Sets.CartesianSet
+select * from instanceof java.lang.String
+select * from instanceof com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobListUpIterator
+
+*guava的笛卡尔积的list是延迟加载机制，只有调用get()等相关方法时才会获取相关的值，否则容易内存溢出
+ 当吧50页页码迭代进去会发现有些组合条件下，是响应的list为空，此时可以调用重试。
+ 而由此可以发现，每遍历成功1000页list成功后就停止迭代器，这个逻辑应该放在ZhilianJobListPlant，再通过EventBus通知
+
+*************58搜索条件数据分析 begin*********************
+ post  https://wxapp.58.com/list/info
+  param={"cityId":"606", 地区
+	"cateCode":"4", 
+	"cateId":"580",
+	"dispCateId":"13901",
+	"dispLocalId":606,
+	"pageNum":10, 页码
+	"key":"业务员", 关键词
+	"queryList":{}} 搜索条件列表
+
+  这个是58首页职位的
+  https://app.58.com/api/list/
+    siji
+   ?tabkey=allcity
+   &action=getListInfo,getFilterInfo
+   &curVer=9.5.2
+   &ct=filter
+   &appId=1
+   &format=json
+   &os=android
+   &localname=xm
+   &v=1
+   &geotype=baidu
+   &isNeedAd=
+   &location=606,610,18383
+   &key=司机
+   &page=1
+   &filterParams={"cmcspid":"9495","filtercate":"sonhuosiji","filterLocal":"xm"}
+   &params={"nsource":"sou","classpolicy":"job_A,suggest_tag_A,tradeline_job"}
+------搜索list响应-----------
+ getListInfo 职位列表
+   infolist
+     infoID 职位id 数据库字段id
+     jobname 职位名  数据库字段jname
+     PGTID或GTID 公司id 对应cid
+ getFilterInfo 过滤条件
+
+
+----------------sql分析------------------------
+
+DELETE FROM zhaopin_job ;
+SELECT Min(caijiTime) FROM zhaopin_job;
+SELECT Max(caijiTime) FROM zhaopin_job;
+SELECT COUNT(*) FROM zhaopin_job;
+
+
+#QPS查询
+SELECT COUNT(*)*60/(Max(caijiTime)-Min(caijiTime)) as qps_r_m FROM zhaopin_job;
+SELECT COUNT(*)/(Max(caijiTime)-Min(caijiTime)) as qps_r_s FROM zhaopin_job;
+SELECT COUNT(*)*60/(Max(caijiTime)-1581739872) as qps FROM zhaopin_job;#1581739872为列表时间
+
+
+----------------日志规划------------------------------------
+按业务代码相关划分：http请求响应、数据库请求响应、Iterator、plant、flowcontrol
+按日志级别可划分为：info、debug、warn、error
+
+
+
