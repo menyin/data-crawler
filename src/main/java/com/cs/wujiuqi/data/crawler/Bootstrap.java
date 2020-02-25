@@ -14,18 +14,19 @@ public class Bootstrap {
 
     public static void main(String[] args) throws InterruptedException{
 
-        Map<String,Pipline> piplines=AP.getBeansOfType(Pipline.class);
+
+        /*Map<String,Pipline> piplines=AP.getBeansOfType(Pipline.class);
         for (Map.Entry<String,Pipline> piplineEntry:piplines.entrySet()){
             piplineEntry.getValue().start();
             System.out.println(piplineEntry.getKey()+"- 启动");
-        }
+        }*/
 
 //        System.out.println(System.getProperties());
 //        Logs.CONSOLE.debug("进入到main方法");
 //        Logs.HTTP.debug("执行http请求");
 //        Logs.SQL.debug("执行http请求");
 //
-        Thread.sleep(Integer.MAX_VALUE);
+//        Thread.sleep(Integer.MAX_VALUE);
 
     }
 
