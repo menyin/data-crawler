@@ -56,8 +56,14 @@ public class JsonUtil {
             }*//*
         }*/
     }
-    /*
+
+    /**
      * 根据key和josn字符串取出特定不重复的value
+     * @param josn
+     * @param key
+     * @return
+     * @remark
+     *  josn字符串未经压缩过则可能出错
      */
     public static HashSet<String> findNoRepeatJosnValues(String josn, String key) {
         String regex = "\"" + key + "\":(\"(.*?)\"|(\\d*))";

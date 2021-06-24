@@ -35,7 +35,7 @@ import java.util.function.Consumer;
 public abstract class AbstractMultiPlant extends EventConsumer implements Plant {
     //    final static private ExecutorService executorService = Executors.newCachedThreadPool();
     @Autowired
-    protected ExecutorService executorService=Executors.newCachedThreadPool(1111);
+    protected ExecutorService executorService;
     //        final static private ExecutorService executorService = Executors.newScheduledThreadPool(100);
 //    private volatile boolean isRunning = true;
     private volatile boolean isCatchQpsExection = false;
