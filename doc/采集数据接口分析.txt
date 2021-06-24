@@ -1,88 +1,199 @@
-*****************�ӿ� begin*********************
-����
-����ְλ�� 
+*************597数据采集*******************
+？采集时存在数据库还是redis
+？跑这个采集的应用的什么cpu、内存、带宽
+？我们按什么维度去采集数据，
+？存储数据表结构有么，导个建表sql给我
+
+？带宽100M是指如果同时上传下载相同的一份数据，是不是12.5/2
+
+
+*智联职位详情和职位列表都有nginx秒并发限制5/6个,恢复需要10分钟左右
+ *智联职位的publishTime是职位更新时间，可以做时间戳判断，更新再采集。 
+  而公司详情没有这个时间，可以根据json长度做为版本判断。初次存储的时候存一个json.hashCode到数据hv字段（HashVersion），只要两字符串内容相同他们的hashCode就一样
+ *分页字段pageIndex
+
+
+*58
+ *职位搜索get方式，分页字段pageIndex，lastPage是否最后一页，infolist职位列表，getFilterInfo筛选条件
+
+*解决方案，
+ 单例线程池，要大；
+ 职位id queue一个放职位id，在程序启动时就要加载全部的职位id到一个list
+ list，在程序启动时就要加载全部的职位id到这个个list，启动一个任务每秒往queue仍5个
+ 
+ *迭代器：不同的采集使用不同的迭代器，所以要抽象出不同的迭代器
+ *速度流控：直接一个参数x 代表 x个请求/秒
+ *数据库保存handler
+ *队列Queue
+ 
+ 结果queue
+*起跑和一轮结束要记入日志。
+
+*架构
+ 整个生产线叫pipline，每个节点叫plant，每个plant里有包含获取上游数据的prevIterator和下放到下游的nextIterator以及runneable接口，
+ 原本想设计成单线结构，后来发现业务需求需要多线并行结构。
+
+*原本FlowController是纳秒级别流控，因为单位问题原本用Thread.sleep()是不支持纳秒单位的。 后来就用非JDK方式executorService.awaitTermination解决
+ 
+
+
+**********************9天计划 begin************************
+*将lion主要代码和思想过一遍，
+*学习lion监控部分、统一的线程池管理、学习AQS、学习ThreadPoolExecutor
+*data-crawler项目文档增加线程池的原理流程图、选型分析：IO密集型+多线程并发型
+
+
+
+
+*测试用websocket建立起100w单机连接，看各个部分性能如何
+
+*java8常用的接口，以下相当于一个方法的委托
+ Cunsumer 
+ Function
+ Supplier 只有一个获取T类型的get方法
+
+*ServerChannelHandler、PacketReceiver、MessageHandler、Connection、Message、Packet之间的关系
+ 客户端发送消息到服务端的ServerChannelHandler
+ ServerChannelHandler在channelActive事件处理方法中new Connection
+ ServerChannelHandler在channelRead事件处理方法中通过之前注入PacketDecoder解码出Packet
+ ServerChannelHandler在channelRead事件处理方法中将Packet+Connection传入到PacketReceiver进行分发
+ PacketReceiver将根据Packet.cmd将Packet+Connection分发给具体的MessageHandler（如HandshakeHandler）
+ MessageHandler将Packet+Connection整合生成具体的Message（如HandshakeMessage），
+ MessageHandler根据具体的Message（如HandshakeMessage）生产响应的Message（如HandshakeOkMessage）
+ HandshakeOkMessage是用HandshakeMessage里的Connection、sessionId生产出来的Packet，并携带一个自己的cmd，
+ HandshakeOkMessage通过相同的Connection发送自身携带的Packet到客户端
+
+*CompletableFuture的使用
+ 相当于一个promise，而这种异步是通过线程来实现
+ CompletableFuture提供四个静态方法，这四个静态方法执行后返回的也是CompletableFuture实例
+ CompletableFuture实例则可以在上述静态方法执行后进行一些Action，实际上就是调用CompletableFuture实例的实例方法
+ 学习参考 https://www.ibm.com/developerworks/cn/java/j-cf-of-jdk8/index.html
+          https://www.jianshu.com/p/6bac52527ca4
+ 注意：通过CompletableFuture实例的complete(resultObj)方法会将当前CompletableFuture实例多代表的任务置为完成状态
+
+*关于BaseService、FutureListener、CompletableFuture、Listener
+ BaseService规约了作为一个服务的行为，其中CompletableFuture<Boolean> start()方法执行后会获取一个CompletableFuture实例。
+ 这个CompletableFuture实例实际上是FutureListener实例，在start()内部实际上会调用futureListener.onSuccess(),
+ 它再调用父类(CompletableFuture)的complete方法，使得CompletableFuture实例所代表的任务处于完成状态，从而触发CompletableFuture相关的链路
+ FutureListener继承了CompletableFuture，在onSuccess里去调用父类CompletableFuture的complete方法，从而触发CompletableFuture相关的链路
+ Listener接口只规约了onSuccess和onFailure方法
+
+
+？题设：大白老师的netty推送系统中，假设骑手和Netty服务的连接时服务端的通道为channelA，并且存在map里，商家推送消息时和Netty服务的连接时服务端的通道为channelB，项目基本的流程是，channelB中的接收到推送消息msg后去找到map里的channelA，然后拿channelA把msg发送到骑手。  是这样吗？
+  问题：在于channelA和channelB分属两个不同的eventloop，即归属不同的线程，这时候不是会有问题么？ 因为掉用channelA发送消息前会判断inEventLoop()，如果为false则报错。  那不是有问题？  一直想不通这个
+  注：SingleUserPushTask进行研究，发现执行任务最终还是用网关与商家之间的connection的channel的eventloop来执行connectionServer与骑手之间connection的channel.write(),而这里面判断了inEventLoop()，显然是有问题的
+
+
+*zookeeper分布式锁，会产生死锁，可通过设置锁节点的过期时间。如果是因为重入性发生的死锁，可以实现为可重入锁。
+ 可重入锁的要点是：识别当前线程和入锁计数
+
+*权限的理解和使用，详见csdn《使用Java API、Curator操作zookeeper的acl权限》
+ 注意的是，exists操作和getAcl操作并不受ACL许可控制，因此任何客户端可以查询节点的状态和节点的ACL。
+
+*CuratorFramework提供了TreeCache来实现对数据节点的缓存和缓存监听更新
+
+*ThreadPoolExecutor线程池核心构造类
+ 具体原理流程看gupao mic 《并发框架（5）.pdf》的流程图
+ 其中构造参数的RejectedExecutionHandler handler参数指拒绝回调，常用的拒绝策略有AbortPolicy（直接抛异常）、CallerRunsPolicy（调用线程池execute方法的线程执行回调处理）、DiscardOldestPolicy（丢弃任务队列中最靠前的任务）、（直接丢弃最后添加到队列的任务）
+ 通过ThreadPoolExecutor构造的线程池实例可以获得已经执行的任务数，当前活动线程数、当前排队线程数等
+
+*应用的分类：CPU密集型、IO密集型、混合型
+ ？这些类型与线程池线程的数量有关系，
+  比如CPU密集型线程池核心线程数要越小越好，因为task切换，导致cpu使用更频繁，一般按CPU核心的倍数去设置
+  放置任务的队列容量也要合理，否则会使得内存暴增
+
+*AQS三板斧：CAS、自旋、LockSuport。
+ CAS是一种无锁的算法，本质上是一种乐观锁的操作。在unsafe类里，这个类也称“魔术类”，需要用根类加载器加载
+
+**********************9天计划 end************************
+
+
+
+*****************接口 begin*********************
+智联
+所有职位： 
   https://capi.zhaopin.com/capi/position/search?component=true
-����ְλ��
+单个职位：
   https://capi.zhaopin.com/capi/position/detail?number=CC712564680J00291329305
 
-��˾��Ϣ��
+公司信息：
   https://capi.zhaopin.com/capi/company/detail?number=CZ369777930
-ְλ���������ڸýӿڱ��������Σ�
+职位搜索（后期该接口被智联屏蔽）
   https://capi.zhaopin.com/capi/position/search?S_SOU_FULL_INDEX=php&S_SOU_WORK_CITY=682
 
   https://capi.zhaopin.com/capi/position/searchV2?channel=bdxiaochengxu&d=F28C2A1A-1E21-4FFE-860A-793C32CAA3DD&v=1.0&platform=15&pageIndex=1&pageSize=40&isCompus=0&S_SOU_SALARY=06001%2C08000&S_SOU_WORK_CITY=682&S_SOU_POSITION_NAME_QUERY=php&eventScenario=bdmpZhaopinSearchV2&e=7e44e9cc18a8b19c4a5808a5470c376b
-��ҵ
+行业
 https://img09.zhaopin.com/2012/other/mobile/mapp/resource/industry.json
 https://img09.zhaopin.com/2012/other/mobile/mapp/resource/v15/industry.json
 https://fecdn3.zhaopin.cn/m/index.web.b1738e.js
 
-�쳣��Ϣ��
-����������� Exception in thread "main" java.util.regex.PatternSyntaxException: Illegal repetition near index 0
-Զ�̷������������ڼ�ر����� javax.net.ssl.SSLHandshakeException: Remote host closed connection during handshake
-���ݿ���� java.sql.SQLException: Incorrect string value: '\xF0\x9F\x88\xB6\xE5\x9B...' for column 
+异常信息：
+正则解析错误： Exception in thread "main" java.util.regex.PatternSyntaxException: Illegal repetition near index 0
+远程服务器在握手期间关闭连接 javax.net.ssl.SSLHandshakeException: Remote host closed connection during handshake
+数据库错误 java.sql.SQLException: Incorrect string value: '\xF0\x9F\x88\xB6\xE5\x9B...' for column 
 	   java.sql.SQLException: Data truncation: Data too long for column
-����ָ�����������б���Ӧ {"statusDescription":"�������쳣�����Ժ�����","taskId":"30c9cc1835964c56a27f05e68291469a","statusCode":210}
-����������ʽ������Ӧ��Ӧ������������©�������ˣ�{"statusCode":200,"statusDescription":"�ɹ�","taskId":"b205d0589fb441ef90b53abbfa900608"}
+智联指定条件请求列表响应 {"statusDescription":"服务器异常，请稍后再试","taskId":"30c9cc1835964c56a27f05e68291469a","statusCode":210}
+智联后面访问结果空响应，应该是智联发现漏洞屏蔽了：{"statusCode":200,"statusDescription":"成功","taskId":"b205d0589fb441ef90b53abbfa900608"}
 
-ע�⣺������ְλ��json�����ַ������Դﵽ72720���ַ���text����ֻ�ܴ�6w+�ַ�����˻�blob����
+注意：智联的职位的json数据字符串可以达到72720个字符，text类型只能存6w+字符，因此换blob类型
 
 58
-ְλ���
+职位类别
   https://app.58.com/api/bigcatetory/category?v=1&cityid=606&curVer=9.5.2&appId=1&format=json&os=android
-ְλ����
-  post�ӿڣ�ʵ�ⲻ���ã�  
+职位搜索
+  post接口（实测不可用）  
   https://wxapp.58.com/list/info
-  param={"cityId":"606","cateCode":"4","cateId":"580","dispCateId":"13901","dispLocalId":606,"pageNum":10,"key":"ҵ��Ա","queryList":{}}
+  param={"cityId":"606","cateCode":"4","cateId":"580","dispCateId":"13901","dispLocalId":606,"pageNum":10,"key":"业务员","queryList":{}}
 
-  get�ӿڣ������58��ҳְλ��
-  https://app.58.com/api/list/siji?tabkey=allcity&action=getListInfo,getFilterInfo&curVer=9.5.2&ct=filter&appId=1&format=json&os=android&localname=xm&v=1&geotype=baidu&isNeedAd=&location=606,610,18383&key=˾��&page=1&filterParams={"cmcspid":"9495","filtercate":"sonhuosiji","filterLocal":"xm"}&params={"nsource":"sou","classpolicy":"job_A,suggest_tag_A,tradeline_job"}
+  get接口，这个是58首页职位的
+  https://app.58.com/api/list/siji?tabkey=allcity&action=getListInfo,getFilterInfo&curVer=9.5.2&ct=filter&appId=1&format=json&os=android&localname=xm&v=1&geotype=baidu&isNeedAd=&location=606,610,18383&key=司机&page=1&filterParams={"cmcspid":"9495","filtercate":"sonhuosiji","filterLocal":"xm"}&params={"nsource":"sou","classpolicy":"job_A,suggest_tag_A,tradeline_job"}
 
-ְλ����
+职位详情
   https://wxapp.58.com/list/detail?infoId=40706289135389
 
-*****************�ӿ� end*********************
+*****************接口 end*********************
 
 
 
 
-*************���������������ݷ��� begin**************
+*************智联搜索条件数据分析 begin**************
 
 https://capi.zhaopin.com/capi/position/searchV2
-?channel=bdxiaochengxu Ӧ��Ӧ�õ�����
+?channel=bdxiaochengxu 应该应用的类型
 &d=F28C2A1A-1E21-4FFE-860A-793C32CAA3DD&v=1.0
-&platform=15  ƽ̨ 
-&pageIndex=1  ����50*20=1000������  50��
+&platform=15  平台 
+&pageIndex=1  限制50*20=1000条数据  50个
 &pageSize=40  
-&isCompus=0   �Ƿ�PC��
-&S_SOU_SALARY=06001%2C08000  ��н  15��
-&S_SOU_WORK_CITY=682 �������� 180+��
-&S_SOU_POSITION_NAME_QUERY=php n�� 
+&isCompus=0   是否PC端
+&S_SOU_SALARY=06001%2C08000  月薪  15个
+&S_SOU_WORK_CITY=682 工作城市 180+个
+&S_SOU_POSITION_NAME_QUERY=php n个 
 &eventScenario=bdmpZhaopinSearchV2 
 &e=7e44e9cc18a8b19c4a5808a5470c376b
 
-ѧ����12��
-�������飺7��
+学历：12个
+工作经验：7个
 C:\Users\cf\Desktop\dump\cralwer\testToIterator\test.hprof
 com.google.common.collect.Sets.CartesianSet
 select * from instanceof java.lang.String
 select * from instanceof com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobListUpIterator
 
-*guava�ĵѿ�������list���ӳټ��ػ��ƣ�ֻ�е���get()����ط���ʱ�Ż��ȡ��ص�ֵ�����������ڴ����
- ����50ҳҳ�������ȥ�ᷢ����Щ��������£�����Ӧ��listΪ�գ���ʱ���Ե������ԡ�
- ���ɴ˿��Է��֣�ÿ�����ɹ�1000ҳlist�ɹ����ֹͣ������������߼�Ӧ�÷���ZhilianJobListPlant����ͨ��EventBus֪ͨ
+*guava的笛卡尔积的list是延迟加载机制，只有调用get()等相关方法时才会获取相关的值，否则容易内存溢出
+ 当吧50页页码迭代进去会发现有些组合条件下，是响应的list为空，此时可以调用重试。
+ 而由此可以发现，每遍历成功1000页list成功后就停止迭代器，这个逻辑应该放在ZhilianJobListPlant，再通过EventBus通知
 
-*************58�����������ݷ��� begin*********************
+*************58搜索条件数据分析 begin*********************
  post  https://wxapp.58.com/list/info
-  param={"cityId":"606", ����
+  param={"cityId":"606", 地区
 	"cateCode":"4", 
 	"cateId":"580",
 	"dispCateId":"13901",
 	"dispLocalId":606,
-	"pageNum":10, ҳ��
-	"key":"ҵ��Ա", �ؼ���
-	"queryList":{}} ���������б�
+	"pageNum":10, 页码
+	"key":"业务员", 关键词
+	"queryList":{}} 搜索条件列表
 
-  �����58��ҳְλ��
+  这个是58首页职位的
   https://app.58.com/api/list/
     siji
    ?tabkey=allcity
@@ -97,20 +208,20 @@ select * from instanceof com.cs.wujiuqi.data.crawler.zhilian.ZhilianJobListUpIte
    &geotype=baidu
    &isNeedAd=
    &location=606,610,18383
-   &key=˾��
+   &key=司机
    &page=1
    &filterParams={"cmcspid":"9495","filtercate":"sonhuosiji","filterLocal":"xm"}
    &params={"nsource":"sou","classpolicy":"job_A,suggest_tag_A,tradeline_job"}
-------����list��Ӧ-----------
- getListInfo ְλ�б�
+------搜索list响应-----------
+ getListInfo 职位列表
    infolist
-     infoID ְλid ���ݿ��ֶ�id
-     jobname ְλ��  ���ݿ��ֶ�jname
-     PGTID��GTID ��˾id ��Ӧcid
- getFilterInfo ��������
+     infoID 职位id 数据库字段id
+     jobname 职位名  数据库字段jname
+     PGTID或GTID 公司id 对应cid
+ getFilterInfo 过滤条件
 
 
-----------------sql����------------------------
+----------------sql分析------------------------
 
 DELETE FROM zhaopin_job ;
 SELECT Min(caijiTime) FROM zhaopin_job;
@@ -118,15 +229,15 @@ SELECT Max(caijiTime) FROM zhaopin_job;
 SELECT COUNT(*) FROM zhaopin_job;
 
 
-#QPS��ѯ
+#QPS查询
 SELECT COUNT(*)*60/(Max(caijiTime)-Min(caijiTime)) as qps_r_m FROM zhaopin_job;
 SELECT COUNT(*)/(Max(caijiTime)-Min(caijiTime)) as qps_r_s FROM zhaopin_job;
-SELECT COUNT(*)*60/(Max(caijiTime)-1581739872) as qps FROM zhaopin_job;#1581739872Ϊ�б�ʱ��
+SELECT COUNT(*)*60/(Max(caijiTime)-1581739872) as qps FROM zhaopin_job;#1581739872为列表时间
 
 
-----------------��־�滮------------------------------------
-��ҵ�������ػ��֣�http������Ӧ�����ݿ�������Ӧ��Iterator��plant��flowcontrol
-����־����ɻ���Ϊ��info��debug��warn��error
+----------------日志规划------------------------------------
+按业务代码相关划分：http请求响应、数据库请求响应、Iterator、plant、flowcontrol
+按日志级别可划分为：info、debug、warn、error
 
 
 
